@@ -1,15 +1,11 @@
 package handlers
 
-import (
-	"github.com/GoncalojmRosa/scrapper/store"
-)
-
 type Handler struct {
-	store *store.Storage
+	// store *store.Storage
 }
 
-func New(store *store.Storage) *Handler {
+func New() *Handler {
 	return &Handler{
-		store: store,
+		// store: store,
 	}
 }

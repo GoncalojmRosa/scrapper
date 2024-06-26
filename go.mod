@@ -2,7 +2,10 @@ module github.com/GoncalojmRosa/scrapper
 
 go 1.22.2
 
-require github.com/gocolly/colly v1.2.0
+require (
+	github.com/gocolly/colly v1.2.0
+	github.com/gorilla/mux v1.8.1
+)
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect

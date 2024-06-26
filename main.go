@@ -1,10 +1,13 @@
 package main
 
-import "github.com/GoncalojmRosa/scrapper/handlers"
+import (
+	"github.com/GoncalojmRosa/scrapper/handlers"
+	"github.com/gorilla/mux"
+)
 
 func main() {
-	router := NewRouter()
-	handler := handlers.()
+	router := mux.NewRouter()
+	handler := handlers.New()
 
-	router.HandleFunc("/api/v1/health", handler.Health).Methods("GET")
+	router.HandleFunc("/api/v1/health", handler.HandleHome).Methods("GET")
 }
