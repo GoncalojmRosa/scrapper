@@ -1,17 +1,18 @@
 package store
 
 import (
-	"database/sql"
-	"log"
+	"fmt"
 
-	"github.com/go-sql-driver/mysql"
+	"github.com/redis/go-redis"
 )
 
-func NewMySQLStorage(cfg mysql.Config) (*sql.DB, error) {
-	db, err := sql.Open("mysql", cfg.FormatDSN())
+func NewRedisStorage() (*redis.Client, error) {
+	client := redis.NewClient(&redis.Options{})
+
+	_, err := client.Ping().Result()
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Error connecting to Redis: %v", err)
 	}
 
-	return db, nil
+	return client, nil
 }

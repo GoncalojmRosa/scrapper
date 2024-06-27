@@ -1,0 +1,11 @@
+package components
+
+import "github.com/GoncalojmRosa/scrapper/types"
+
+templ ProductList(product []types.Product) {
+	<ul id="car-list" class="flex my-4 flex-wrap m-auto w-2/3">
+		for _, p := range product {
+			<h1>{p.Name}</h1>
+		}
+	</ul>
+}
