@@ -1,8 +1,10 @@
 package views
 
 templ Home() {
-  <div>
-    <h1>Home</h1>
-    <p>Welcome to the home page</p>
-  </div>
+  @Page(true){
+    <div class="bg-red-500">
+      <h1>Home</h1>
+      <p>Welcome to the home page</p>
+    </div>
+  }
 }
