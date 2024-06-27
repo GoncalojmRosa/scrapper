@@ -2,7 +2,7 @@ package views
 
 import "github.com/GoncalojmRosa/scrapper/types"
 
-templ Home() {
+templ Home(ProductList []types.Product) {
   @Page(true){
     <div class="bg-red-500">
       <h1>Home</h1>

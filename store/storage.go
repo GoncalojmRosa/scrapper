@@ -3,7 +3,7 @@ package store
 import (
 	"fmt"
 
-	"github.com/redis/go-redis"
+	"github.com/go-redis/redis"
 )
 
 func NewRedisStorage() (*redis.Client, error) {

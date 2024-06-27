@@ -2,10 +2,7 @@ module github.com/GoncalojmRosa/scrapper
 
 go 1.22.2
 
-require (
-	github.com/gorilla/mux v1.8.1
-	github.com/redis/go-redis v6.15.9+incompatible
-)
+require github.com/gorilla/mux v1.8.1
 
 require (
 	github.com/PuerkitoBio/goquery v1.9.2 // indirect
@@ -13,10 +10,9 @@ require (
 	github.com/antchfx/htmlquery v1.3.2 // indirect
 	github.com/antchfx/xmlquery v1.4.1 // indirect
 	github.com/antchfx/xpath v1.3.1 // indirect
-	github.com/go-redis/redis v6.15.9+incompatible // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.33.1 // indirect
@@ -25,10 +21,11 @@ require (
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/protobuf v1.33.0 // indirect
+	google.golang.org/protobuf v1.34.2 // indirect
 )
 
 require (
-	github.com/a-h/templ v0.2.707
+	github.com/a-h/templ v0.2.731
+	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/gocolly/colly v1.2.0
 )
