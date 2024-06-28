@@ -24,3 +24,16 @@ func TestInsertProduct(t *testing.T) {
 		log.Fatalf("InsertProduct() err = %v; want nil", err)
 	}
 }
+
+func TestGetProducts(t *testing.T) {
+	rdb, err := NewRedisStorage()
+	if err != nil {
+		log.Fatalf("NewRedisStorage() err = %v; want nil", err)
+	}
+	store := NewStore(rdb)
+	products, err := store.GetProducts()
+	if err != nil {
+		log.Fatalf("GetProducts() err = %v; want nil", err)
+	}
+	log.Printf("Products: %v", products)
+}

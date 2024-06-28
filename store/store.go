@@ -23,3 +23,18 @@ func NewStore(rdb *redis.Client) *Storage {
 func (s *Storage) InsertProduct(name, price, img string) error {
 	return s.rdb.HSet("products", name, price).Err()
 }
+
+func (s *Storage) GetProducts() ([]types.Product, error) {
+	products := []types.Product{}
+	result, err := s.rdb.HGetAll("products").Result()
+	if err != nil {
+		return nil, err
+	}
+	for name, price := range result {
+		products = append(products, types.Product{
+			Name:  name,
+			Price: price,
+		})
+	}
+	return products, nil
+}
