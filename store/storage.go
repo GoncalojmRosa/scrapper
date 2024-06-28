@@ -11,7 +11,7 @@ func NewRedisStorage() (*redis.Client, error) {
 
 	_, err := client.Ping().Result()
 	if err != nil {
-		return nil, fmt.Errorf("Error connecting to Redis: %v", err)
+		return nil, fmt.Errorf("error connecting to Redis: %v", err)
 	}
 
 	return client, nil

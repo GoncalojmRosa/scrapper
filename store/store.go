@@ -1,13 +1,12 @@
 package store
 
 import (
-	"database/sql"
-
 	"github.com/GoncalojmRosa/scrapper/types"
+	"github.com/go-redis/redis"
 )
 
 type Storage struct {
-	db *sql.DB
+	rdb *redis.Client
 }
 
 type Store interface {
@@ -15,8 +14,12 @@ type Store interface {
 	GetProducts() ([]types.Product, error)
 }
 
-func NewStore(db *sql.DB) *Storage {
+func NewStore(rdb *redis.Client) *Storage {
 	return &Storage{
-		db: db,
+		rdb: rdb,
 	}
+}
+
+func (s *Storage) InsertProduct(name, price, img string) error {
+	return s.rdb.HSet("products", name, price).Err()
 }
