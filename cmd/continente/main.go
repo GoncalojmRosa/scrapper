@@ -1,13 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
-	"github.com/GoncalojmRosa/scrapper/types"
 	"github.com/gocolly/colly"
 )
 
-var products []types.Product
+type ContinenteResponse struct {
+	Name  string  `json:"name"`
+	Price float64 `json:"price"`
+	Img   string  `json:"img"`
+}
+
+var products []ContinenteResponse
 
 func main() {
 	col := colly.NewCollector()
@@ -16,14 +22,15 @@ func main() {
 	// iterating over the list of HTML product elements
 	col.OnHTML("div.product", func(e *colly.HTMLElement) {
 		// initializing a new Product instance
-		product := types.Product{}
+		product := ContinenteResponse{}
 
 		// scraping the data of interest
-		product.Img = e.ChildAttr("img", "src")
-		product.Name = e.ChildText("h2")
-		product.Price = e.ChildText(".ct-price-formatted")
-
-		// adding the product instance with scraped data to the list of products
+		result := e.ChildAttr("div.product-tile", "data-product-tile-impression")
+		err := json.Unmarshal([]byte(result), &product)
+		if err != nil {
+			fmt.Println("Error unmarshalling JSON:", err)
+		}
+		product.Img = e.ChildAttr("img.ct-tile-image", "data-src")
 		products = append(products, product)
 	})
 
@@ -36,10 +43,30 @@ func main() {
 		fmt.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
 	})
 
-	// Visit the website after setting up all the callbacks
-	col.Visit("https://www.continente.pt/campanhas/campanhas-folhetos/folheto-semanal-2/?start=0&srule=Trading-categorias-destaques&pmin=0.01")
+	// Function to visit each page and collect products
+	visitPage := func(pageNumber int) error {
+		url := fmt.Sprintf("https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=mercearias&pmin=0%%2e01&srule=FOOD_Mercearia&start=%d&sz=24", pageNumber*24)
+		return col.Visit(url)
+	}
 
-	// Print the products after the visit is complete
-	fmt.Println(products)
+	// Iterate over pages until no more products are found
+	pageNumber := 0
+	for {
+		err := visitPage(pageNumber)
+		if err != nil {
+			fmt.Println("Error visiting page:", err)
+			break
+		}
+
+		// Wait for requests to finish before deciding to stop or continue
+		col.Wait()
+
+		if len(products) <= pageNumber*24 {
+			break
+		}
+		pageNumber++
+	}
+
+	fmt.Println("Products:", products)
 	fmt.Println("PRODUCT LENGTH:", len(products))
 }
