@@ -28,4 +28,5 @@ require (
 	github.com/a-h/templ v0.2.731
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/gocolly/colly v1.2.0
+	github.com/joho/godotenv v1.5.1
 )

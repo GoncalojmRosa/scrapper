@@ -27,6 +27,8 @@ func ConnectToRedis() {
 }
 
 func SaveToRedis(key string, value string) {
+	// TODO: Save other values, like Img, instead only price
+
 	err := redisClient.HSet("auchan", key, value).Err()
 	if err != nil {
 		fmt.Println("Error saving to redis:", err)
@@ -34,16 +36,23 @@ func SaveToRedis(key string, value string) {
 	}
 }
 
+// var proxies = []string{
+// 	"https://95.92.206.174:3128",
+// 	"https://188.93.237.29:3128",
+// }
+
 func main() {
 	ConnectToRedis()
 
 	col := colly.NewCollector()
 	col.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-	// rp, err := proxy.RoundRobinProxySwitcher("socks5://127.0.0.1:1337", "socks5://127.0.0.1:1338")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// col.SetProxyFunc(rp)
+
+	// col.SetRequestTimeout(120 * time.Second)
+
+	// col.SetProxyFunc(func(_ *http.Request) (*url.URL, error) {
+	// 	proxyURL, _ := url.Parse(proxies[rand.Intn(len(proxies))])
+	// 	return proxyURL, nil
+	// })
 	// iterating over the list of HTML product elements
 
 	products := make([]AuchanResponse, 0)
@@ -78,10 +87,9 @@ func main() {
 	})
 
 	// Visit the website after setting up all the callbacks
-	col.Visit("https://www.auchan.pt/on/demandware.store/Sites-AuchanPT-Site/pt_PT/Search-UpdateGrid?cgid=produtos-frescos&prefn1=soldInStores&prefv1=000&start=0&sz=2000")
+	col.Visit("https://www.auchan.pt/on/demandware.store/Sites-AuchanPT-Site/pt_PT/Search-UpdateGrid?cgid=produtos-frescos&prefn1=soldInStores&prefv1=000&start=0&sz=200")
+	col.Wait()
 
-	// Print the products after the visit is complete
-	//fmt.Println(products)
 	fmt.Println("PRODUCT LENGTH:", len(products))
 	for _, product := range products {
 		SaveToRedis(product.Name, product.Price)

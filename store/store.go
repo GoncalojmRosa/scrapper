@@ -10,7 +10,6 @@ type Storage struct {
 }
 
 type Store interface {
-	InsertProduct(name, price, img string) error
 	GetProducts() ([]types.Product, error)
 }
 
@@ -20,13 +19,9 @@ func NewStore(rdb *redis.Client) *Storage {
 	}
 }
 
-func (s *Storage) InsertProduct(name, price, img string) error {
-	return s.rdb.HSet("products", name, price).Err()
-}
-
 func (s *Storage) GetProducts() ([]types.Product, error) {
 	products := []types.Product{}
-	result, err := s.rdb.HGetAll("products").Result()
+	result, err := s.rdb.HGetAll("auchan").Result()
 	if err != nil {
 		return nil, err
 	}

@@ -1,14 +1,10 @@
 package views
 
-import "github.com/GoncalojmRosa/scrapper/types"
-import "github.com/GoncalojmRosa/scrapper/components"
-
-templ Home(ProductList []types.Product) {
+templ Home() {
   @Page(true){
     <div>
       <section>
         <h2 class="text-2xl font-bold text-slate-900">Products</h2>
-        @components.ProductList(ProductList)
       </section>
     </div>
   }
