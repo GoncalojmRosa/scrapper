@@ -1,27 +1,69 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
-	"github.com/GoncalojmRosa/scrapper/types"
+	"github.com/go-redis/redis"
 	"github.com/gocolly/colly"
 )
 
-var products []types.Product
+type AuchanResponse struct {
+	Name  string `json:"name"`
+	Price string `json:"price"`
+	Img   string `json:"img"`
+}
+
+var redisClient *redis.Client
+
+func ConnectToRedis() {
+	opt, err := redis.ParseURL("")
+	if err != nil {
+		panic(err)
+	}
+
+	redisClient = redis.NewClient(opt)
+	fmt.Println(redisClient.Ping())
+}
+
+func SaveToRedis(key string, value string) {
+	err := redisClient.HSet("auchan", key, value).Err()
+	if err != nil {
+		fmt.Println("Error saving to redis:", err)
+		return
+	}
+}
 
 func main() {
+	ConnectToRedis()
+
 	col := colly.NewCollector()
 	col.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-
+	// rp, err := proxy.RoundRobinProxySwitcher("socks5://127.0.0.1:1337", "socks5://127.0.0.1:1338")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// col.SetProxyFunc(rp)
 	// iterating over the list of HTML product elements
+
+	products := make([]AuchanResponse, 0)
+
 	col.OnHTML("div.product", func(e *colly.HTMLElement) {
 		// initializing a new Product instance
-		product := types.Product{}
+		product := AuchanResponse{}
 
-		// scraping the data of interest
-		product.Img = e.ChildAttr("img", "src")
-		product.Name = e.ChildText("h3")
-		product.Price = e.ChildText(".value")
+		result := e.ChildAttr("div.product-tile", "data-gtm")
+		if !json.Valid([]byte(result)) {
+			fmt.Println("Invalid JSON, skipping:", result)
+			return
+		}
+		err := json.Unmarshal([]byte(result), &product)
+		if err != nil {
+			fmt.Println(result)
+			fmt.Println("Error unmarshalling JSON:", err)
+			return
+		}
+		product.Img = e.ChildAttr("link", "href")
 
 		// adding the product instance with scraped data to the list of products
 		products = append(products, product)
@@ -36,9 +78,12 @@ func main() {
 	})
 
 	// Visit the website after setting up all the callbacks
-	col.Visit("https://www.auchan.pt/pt/folhetos/folheto-semanal-1/")
+	col.Visit("https://www.auchan.pt/on/demandware.store/Sites-AuchanPT-Site/pt_PT/Search-UpdateGrid?cgid=produtos-frescos&prefn1=soldInStores&prefv1=000&start=0&sz=2000")
 
 	// Print the products after the visit is complete
-	fmt.Println(products)
+	//fmt.Println(products)
 	fmt.Println("PRODUCT LENGTH:", len(products))
+	for _, product := range products {
+		SaveToRedis(product.Name, product.Price)
+	}
 }
