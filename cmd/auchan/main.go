@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/go-redis/redis"
 	"github.com/gocolly/colly"
@@ -17,7 +18,7 @@ type AuchanResponse struct {
 var redisClient *redis.Client
 
 func ConnectToRedis() {
-	opt, err := redis.ParseURL("")
+	opt, err := redis.ParseURL("redis://default:NE10GnhdwtJ5tnmTOYI8Pba5thc3NXck@redis-15552.c268.eu-west-1-2.ec2.redns.redis-cloud.com:15552")
 	if err != nil {
 		panic(err)
 	}
@@ -26,14 +27,27 @@ func ConnectToRedis() {
 	fmt.Println(redisClient.Ping())
 }
 
-func SaveToRedis(key string, value string) {
-	// TODO: Save other values, like Img, instead only price
-
-	err := redisClient.HSet("auchan", key, value).Err()
+func SaveToRedis(product AuchanResponse) {
+	key := fmt.Sprintf("auchan:products:%s", product.Name)
+	err := redisClient.HSet(key, product.Img, product.Price).Err()
 	if err != nil {
 		fmt.Println("Error saving to redis:", err)
 		return
 	}
+
+	// Add product name to the set of product names for the given prefix
+	err = redisClient.SAdd("auchan:products", product.Name).Err()
+	if err != nil {
+		fmt.Println("Error adding product to set:", err)
+		return
+	}
+
+	// Set key to expire in one week
+	err = redisClient.Expire(key, 7*24*time.Hour).Err()
+	if err != nil {
+		fmt.Println("Error setting key expiration:", err)
+	}
+
 }
 
 // var proxies = []string{
@@ -92,6 +106,6 @@ func main() {
 
 	fmt.Println("PRODUCT LENGTH:", len(products))
 	for _, product := range products {
-		SaveToRedis(product.Name, product.Price)
+		SaveToRedis(product)
 	}
 }
