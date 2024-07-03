@@ -29,13 +29,27 @@ func ConnectToRedis() {
 
 func SaveToRedis(product AuchanResponse) {
 	key := fmt.Sprintf("auchan:products:%s", product.Name)
-	err := redisClient.HSet(key, product.Img, product.Price).Err()
+
+	// Save individual fields to Redis hash
+	err := redisClient.HSet(key, "name", product.Name).Err()
 	if err != nil {
-		fmt.Println("Error saving to redis:", err)
+		fmt.Println("Error saving name to redis:", err)
 		return
 	}
 
-	// Add product name to the set of product names for the given prefix
+	err = redisClient.HSet(key, "price", product.Price).Err()
+	if err != nil {
+		fmt.Println("Error saving price to redis:", err)
+		return
+	}
+
+	err = redisClient.HSet(key, "img", product.Img).Err()
+	if err != nil {
+		fmt.Println("Error saving img to redis:", err)
+		return
+	}
+
+	// Add product name to the set of product names
 	err = redisClient.SAdd("auchan:products", product.Name).Err()
 	if err != nil {
 		fmt.Println("Error adding product to set:", err)
@@ -47,7 +61,6 @@ func SaveToRedis(product AuchanResponse) {
 	if err != nil {
 		fmt.Println("Error setting key expiration:", err)
 	}
-
 }
 
 // var proxies = []string{
