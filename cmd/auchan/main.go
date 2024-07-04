@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -28,7 +29,7 @@ func ConnectToRedis() {
 }
 
 func SaveToRedis(product AuchanResponse) {
-	key := fmt.Sprintf("auchan:products:%s", product.Name)
+	key := fmt.Sprintf("auchan:products:%s", strings.Split(product.Name, " ")[0])
 
 	// Save individual fields to Redis hash
 	err := redisClient.HSet(key, "name", product.Name).Err()
