@@ -19,7 +19,7 @@ type AuchanResponse struct {
 var redisClient *redis.Client
 
 func ConnectToRedis() {
-	opt, err := redis.ParseURL("redis://default:NE10GnhdwtJ5tnmTOYI8Pba5thc3NXck@redis-15552.c268.eu-west-1-2.ec2.redns.redis-cloud.com:15552")
+	opt, err := redis.ParseURL("")
 	if err != nil {
 		panic(err)
 	}
@@ -29,7 +29,7 @@ func ConnectToRedis() {
 }
 
 func SaveToRedis(product AuchanResponse) {
-	key := fmt.Sprintf("auchan:products:%s", strings.Split(product.Name, " ")[0])
+	key := fmt.Sprintf("products:%s", strings.Split(product.Name, " ")[0])
 
 	// Save individual fields to Redis hash
 	err := redisClient.HSet(key, "name", product.Name).Err()
@@ -50,8 +50,14 @@ func SaveToRedis(product AuchanResponse) {
 		return
 	}
 
+	err = redisClient.HSet(key, "supermarket", "auchan").Err()
+	if err != nil {
+		fmt.Println("Error saving supermarket to redis:", err)
+		return
+	}
+
 	// Add product name to the set of product names
-	err = redisClient.SAdd("auchan:products", product.Name).Err()
+	err = redisClient.SAdd("products", product.Name).Err()
 	if err != nil {
 		fmt.Println("Error adding product to set:", err)
 		return

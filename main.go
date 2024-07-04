@@ -26,6 +26,8 @@ func main() {
 	handler := handlers.New(store)
 
 	router.HandleFunc("/", handler.HandleListProducts).Methods("GET")
+	router.HandleFunc("/products", handler.HandleProductSearch).Methods("POST")
+
 	router.PathPrefix("/public/").Handler(http.StripPrefix("/public/", http.FileServer(http.Dir("public"))))
 
 	http.ListenAndServe(":8080", router)
