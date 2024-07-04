@@ -3,9 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
+	"strings"
 	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/gocolly/colly"
 )
 
@@ -15,36 +16,72 @@ type ContinenteResponse struct {
 	Img   string  `json:"img"`
 }
 
-var (
-	urlsToScrape = []string{
-		"https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=biologicos&pmin=0%2e01&start=",
-		"https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=laticinios&pmin=0%2e01&start=",
-		"https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=peixaria-e-talho&pmin=0%2e01&start=",
-		// "https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=frutas-legumes&pmin=0%2e01&start=",
-		// "https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=charcutaria-queijo&pmin=0%2e01&start=",
-		// "https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=padaria-e-pastelaria&pmin=0%2e01&start=",
-		// "https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=refeicoes-faceis&pmin=0%2e01&start=",
-		// "https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=congelados&pmin=0%2e01&start=",
-		// "https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=bebidas&pmin=0%2e01&start=",        // 5k products
-		// "https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=higiene-beleza&pmin=0%2e01&start=", // 5k products
-		// "https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=limpeza&pmin=0%2e01&start=",
-		// "https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=livraria-papelaria&pmin=0%2e01&start=", // 7k products
-		// "https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?cgid=mercearias&pmin=0%2e01&start=",
+var products []ContinenteResponse
+
+var redisClient *redis.Client
+
+func ConnectToRedis() {
+	opt, err := redis.ParseURL("")
+	if err != nil {
+		panic(err)
 	}
-)
+
+	redisClient = redis.NewClient(opt)
+	fmt.Println(redisClient.Ping())
+}
+
+func SaveToRedis(product ContinenteResponse) {
+	key := fmt.Sprintf("products:%s", strings.Split(strings.ToUpper(product.Name), " ")[0])
+
+	// Save individual fields to Redis hash
+	err := redisClient.HSet(key, "name", product.Name).Err()
+	if err != nil {
+		fmt.Println("Error saving name to redis:", err)
+		return
+	}
+
+	err = redisClient.HSet(key, "price", product.Price).Err()
+	if err != nil {
+		fmt.Println("Error saving price to redis:", err)
+		return
+	}
+
+	err = redisClient.HSet(key, "img", product.Img).Err()
+	if err != nil {
+		fmt.Println("Error saving img to redis:", err)
+		return
+	}
+
+	err = redisClient.HSet(key, "supermarket", "continente").Err()
+	if err != nil {
+		fmt.Println("Error saving supermarket to redis:", err)
+		return
+	}
+
+	// Add product name to the set of product names
+	err = redisClient.SAdd("products", product.Name).Err()
+	if err != nil {
+		fmt.Println("Error adding product to set:", err)
+		return
+	}
+
+	// Set key to expire in one week
+	err = redisClient.Expire(key, 7*24*time.Hour).Err()
+	if err != nil {
+		fmt.Println("Error setting key expiration:", err)
+	}
+}
 
 func main() {
+	ConnectToRedis()
 	col := colly.NewCollector(colly.Async(true))
 	col.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+
 	col.Limit(&colly.LimitRule{
-		Parallelism: 5,
-		RandomDelay: 1 * time.Second,
+		Parallelism: 2,
+		RandomDelay: 5 * time.Second,
 	})
-
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	products := make([]ContinenteResponse, 0)
-
+	// iterating over the list of HTML product elements
 	col.OnHTML("div.product", func(e *colly.HTMLElement) {
 		product := ContinenteResponse{}
 		result := e.ChildAttr("div.product-tile", "data-product-tile-impression")
@@ -59,9 +96,8 @@ func main() {
 			return
 		}
 		product.Img = e.ChildAttr("img.ct-tile-image", "data-src")
-		mu.Lock()
 		products = append(products, product)
-		mu.Unlock()
+		SaveToRedis(product)
 	})
 
 	col.OnRequest(func(r *colly.Request) {
@@ -73,52 +109,29 @@ func main() {
 		fmt.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
 	})
 
-	visitPage := func(baseURL string, pageNumber int, wg *sync.WaitGroup) error {
-		defer wg.Done()
-		url := fmt.Sprintf("%s%d&sz=24", baseURL, pageNumber*24)
+	// Function to visit each page and collect products
+	visitPage := func(pageNumber int) error {
+		url := fmt.Sprintf("https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Search-UpdateGrid?&start=%d&sz=24", pageNumber*24)
 		return col.Visit(url)
 	}
 
-	for _, baseURL := range urlsToScrape {
-		wg.Add(1)
-		go func(baseURL string) {
-			defer wg.Done() // Ensure that the wait group counter is decremented
-			pageNumber := 0
-			for {
-				pageWG := &sync.WaitGroup{}
-				mu.Lock()
-				productCount := len(products)
-				mu.Unlock()
-				pageWG.Add(1)
-				err := visitPage(baseURL, pageNumber, pageWG)
-				if err != nil {
-					fmt.Println("Error visiting page:", err)
-					pageWG.Done() // Ensure we mark the wait group as done if there's an error
-					break
-				}
-				pageWG.Wait() // Wait for the current page request to complete
+	// Iterate over pages until no more products are found
+	pageNumber := 0
+	for {
+		err := visitPage(pageNumber)
+		if err != nil {
+			fmt.Println("Error visiting page:", err)
+			break
+		}
 
-				if productCount == 0 {
-					fmt.Println("No products found on page, ending scraping for category:", baseURL)
-					break
-				}
+		// Wait for requests to finish before deciding to stop or continue
+		col.Wait()
 
-				mu.Lock()
-				newProductCount := len(products)
-				mu.Unlock()
-
-				if newProductCount == productCount {
-					fmt.Println("No new products found, ending scraping for category:", baseURL)
-					break
-				}
-
-				pageNumber++
-			}
-		}(baseURL)
+		if len(products) <= pageNumber*24 {
+			break
+		}
+		pageNumber++
 	}
 
-	wg.Wait()
-	col.Wait() // Ensure all async requests are finished
-
-	fmt.Println("TOTAL PRODUCTS LENGTH:", len(products))
+	fmt.Println("PRODUCT LENGTH:", len(products))
 }
