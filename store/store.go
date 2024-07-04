@@ -32,7 +32,14 @@ func (s *Storage) GetProducts() ([]types.Product, error) {
 	}
 
 	var products []types.Product
+	counter := 0
+	limit := 20
+
 	for _, name := range productNames {
+		if counter >= limit {
+			break
+		}
+
 		key := fmt.Sprintf("products:%s", strings.Split(name, " ")[0])
 		data, err := s.rdb.HGetAll(key).Result()
 		if err != nil {
@@ -59,6 +66,7 @@ func (s *Storage) GetProducts() ([]types.Product, error) {
 		}
 
 		products = append(products, productData)
+		counter++
 	}
 
 	return products, nil
@@ -70,7 +78,6 @@ func (s *Storage) GetProductByName(name string) ([]types.Product, error) {
 		log.Println("Error retrieving product data:", err)
 		return nil, err
 	}
-
 	// Ensure the required fields are present in the data
 	name, nameOk := product["name"]
 	price, priceOk := product["price"]
